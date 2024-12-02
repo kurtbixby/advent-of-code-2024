@@ -24,10 +24,10 @@ function main(args) {
 }
 
 function calculateDistance(left, right) {
+    assert.equal(left.length, right.length);
     left.sort();
     right.sort();
     let distance = 0;
-    assert.equal(left.length, right.length);
     for (let i = 0; i < left.length; i++) {
         distance += (Math.abs(left[i] - right[i]))
     }
