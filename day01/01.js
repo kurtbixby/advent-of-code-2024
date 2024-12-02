@@ -44,6 +44,7 @@ function calculateSimilarity(left, right) {
         }
         return freqDict;
     }, {});
+    
     const similarity = left.reduce((sum, cur) => {
         if (cur in freq) {
             sum += cur * freq[cur];
