@@ -59,7 +59,6 @@ function createSpecialSort(rules) {
 }
 
 function isPrintSafe(update, rules) {
-    // console.log(rules);
     let printedPages = {};
     for (let i = 0; i < update.length; i++) {
         let page = update[i];
@@ -72,8 +71,5 @@ function isPrintSafe(update, rules) {
 
     return true;;
 }
-// return parseInt(update[Math.floor(update.length / 2)]);
-
-// function part2()
 
 setup();

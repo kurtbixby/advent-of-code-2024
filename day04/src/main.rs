@@ -91,9 +91,3 @@ fn check_cross_mas(letter_grid: &[Vec<char>], location: (u32, u32)) -> bool {
 
     return tlbr && trbl;
 }
-
-
-// if i == 0 && j == 0 {
-//     continue;
-// }
-// fn check
