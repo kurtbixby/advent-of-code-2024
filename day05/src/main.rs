@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::cmp::Ordering;
 
 fn main() {
     let (rules, updates) = read_input();
     println!("{:?}", part1(updates.as_slice(), &rules));
+    println!("{:?}", part2(updates.as_slice(), &rules));
 }
 
 fn read_input() -> (HashMap<u32,HashSet<u32>>, Vec<Vec<u32>>) {
@@ -41,6 +43,27 @@ fn read_input() -> (HashMap<u32,HashSet<u32>>, Vec<Vec<u32>>) {
 
 fn part1(updates: &[Vec<u32>], rules: &HashMap<u32,HashSet<u32>>) -> u32 {
     updates.iter().filter(|update| is_print_safe(&update, &rules)).fold(0, |acc, update| acc + update.get(update.len() / 2).unwrap())
+}
+
+fn part2(updates: &[Vec<u32>], rules: &HashMap<u32,HashSet<u32>>) -> u32 {
+    let custom_sort = |a: &u32, b: &u32| -> Ordering {
+        let restrictions = rules.get(a).unwrap();
+        if restrictions.contains(b) {
+            return Ordering::Less;
+        } else if a == b {
+            return Ordering::Equal;
+        } else {
+            return Ordering::Greater;
+        }
+    };
+
+    return updates.iter()
+        .filter(|update| !is_print_safe(update, rules))
+        .fold(0, |acc, update| {
+            let mut update_clone = update.clone();
+            update_clone.sort_by(custom_sort);
+            acc + update_clone.get(update.len() / 2).unwrap()
+        });
 }
 
 fn is_print_safe(update: &[u32], rules: &HashMap<u32,HashSet<u32>>) -> bool {
