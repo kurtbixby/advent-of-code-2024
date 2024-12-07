@@ -44,11 +44,79 @@ function setup() {
 }
 
 function main({startState, grid}) {
-    const sum = part1({startState, grid});
-    console.log(sum);
+    const sum = part1({location: {...startState.location}, direction: startState.direction}, grid);
+    console.log("X Count: " + sum);
+    let start = Date.now();
+    const locationCount = part2({location: {...startState.location}, direction: startState.direction}, grid);
+    let bruteForceTime = (Date.now() - start) / 1000;
+    console.log("Loop locations count: " + locationCount);
+    console.log("Brute force time(s): " + bruteForceTime);
 }
 
-function part1({startState, grid}) {
+function part2(startState, grid) {
+    let foundLoopCount = 0;
+    for (let i = 0; i < grid.dimensions.rows; ++i) {
+        let addedRow = false;
+        if (!(i in grid.obstacles.rowOrder)) {
+            grid.obstacles.rowOrder[i] = [];
+            addedRow = true;
+        }
+        for (let j = 0; j < grid.dimensions.columns; ++j) {
+
+            if (grid.obstacles.rowOrder[i].includes(j) || (i === startState.location.row && j === startState.location.column)) {
+                continue;
+            }
+
+            // Add the obstacle to the row lookup
+            grid.obstacles.rowOrder[i].push(j);
+
+            let addedColumn = false;
+            if (!(j in grid.obstacles.columnOrder)) {
+                grid.obstacles.columnOrder[j] = [];
+                addedColumn = true;
+            }
+            grid.obstacles.columnOrder[j].push(i);
+
+            let visitedPositions = {};
+            let stateCopy = {location: {row: startState.location.row, column: startState.location.column}, direction: startState.direction};
+            let foundLoop = simulateWalk(stateCopy, grid, (row, col, dir) => {return !isLoopPosition(visitedPositions, row, col, dir)});
+            if (foundLoop) {
+                foundLoopCount++;
+            }
+
+            grid.obstacles.columnOrder[j].pop();
+
+            if (addedColumn) {
+                delete grid.obstacles.columnOrder[j];
+            }
+
+            grid.obstacles.rowOrder[i].pop();
+        }
+        if (addedRow) {
+            delete grid.obstacles.rowOrder[i];
+        }
+    }
+
+    return foundLoopCount;
+}
+
+function isLoopPosition(positions, row, col, dir) {
+    if (!(row in positions)) {
+        positions[row] = {};
+    }
+    if (!(col in positions[row])) {
+        positions[row][col] = new Set();
+    }
+
+    if (positions[row][col].has(dir)) {
+        return true;
+    } else {
+        positions[row][col].add(dir);
+    }
+    return false;
+}
+
+function part1(startState, grid) {
     let xCount = 0;
     let xPositions = {};
     
@@ -60,25 +128,36 @@ function part1({startState, grid}) {
             xPositions[row].add(col);
             xCount++;
         }
+        return true;
     }
 
-    let state = startState;
-    while(true) {
-        console.log("State: " + state);
-        console.log("X Count: " + xCount);
+    simulateWalk({...startState}, grid, addXPosition);
+
+    return xCount;
+}
+
+function findClosestObstacle(obstacles, outOfRange, currentPosition, comparator) {
+    let closest = obstacles === undefined ? outOfRange : obstacles.reduce((closest, o) => comparator(closest, o) && comparator(o, currentPosition) ? o : closest, outOfRange);
+    if (closest === currentPosition) { // There are no more obstacles
+        closest = outOfRange;
+    }
+
+    return closest;
+}
+
+function simulateWalk(state, grid, addFunction) {
+    let shouldContinue = true;
+    while(shouldContinue) {
         switch (state.direction) {
             case "^":
                 {
                     const obstacles = grid.obstacles.columnOrder[state.location.column];
-                    let closest = obstacles === undefined ? -1 : obstacles.reduce((closest, o) => o > closest && o < state.location.row ? o : closest, -1);
-                    if (closest === state.location.row) { // There are no more obstacles
-                        closest = -1;
-                    }
+                    let closest = findClosestObstacle(obstacles, -1, state.location.row, (a, b) => a < b);
                     for (let i = state.location.row; i > closest; --i) {
-                        addXPosition(i, state.location.column);
+                        shouldContinue = addFunction(i, state.location.column, state.direction);
                     }
                     if (closest === -1) {
-                        return xCount;
+                        return false;
                     }
                     state.location.row = closest + 1;
                     state.direction = ">";
@@ -87,15 +166,12 @@ function part1({startState, grid}) {
             case "v":
                 {
                     const obstacles = grid.obstacles.columnOrder[state.location.column];
-                    let closest = obstacles === undefined ? grid.dimensions.rows :  obstacles.reduce((closest, o) => o < closest && o > state.location.row ? o : closest, grid.dimensions.rows);
-                    if (closest === state.location.row) { // There are no more obstacles
-                        closest = grid.dimensions.rows;
-                    }
+                    let closest = findClosestObstacle(obstacles, grid.dimensions.rows, state.location.row, (a, b) => a > b);
                     for (let i = state.location.row; i < closest; ++i) {
-                        addXPosition(i, state.location.column);
+                        shouldContinue = addFunction(i, state.location.column, state.direction);
                     }
                     if (closest === grid.dimensions.rows) {
-                        return xCount;
+                        return false;
                     }
                     state.location.row = closest - 1;
                     state.direction = "<";
@@ -104,15 +180,12 @@ function part1({startState, grid}) {
             case "<":
                 {
                     const obstacles = grid.obstacles.rowOrder[state.location.row];
-                    let closest = obstacles === undefined ? -1 : obstacles.reduce((closest, o) => o > closest && o < state.location.column ? o : closest, -1);
-                    if (closest === state.location.column) { // There are no more obstacles
-                        closest = -1;
-                    }
+                    let closest = findClosestObstacle(obstacles, -1, state.location.column, (a, b) => a < b);
                     for (let i = state.location.column; i > closest; --i) {
-                        addXPosition(state.location.row, i);
+                        shouldContinue = addFunction(state.location.row, i, state.direction);
                     }
                     if (closest === -1) {
-                        return xCount;
+                        return false;
                     }
                     state.location.column = closest + 1;
                     state.direction = "^";
@@ -121,15 +194,12 @@ function part1({startState, grid}) {
             case ">":
                 {
                     const obstacles = grid.obstacles.rowOrder[state.location.row];
-                    let closest = obstacles === undefined ? grid.dimensions.columns : obstacles.reduce((closest, o) => o < closest && o > state.location.column ? o : closest, grid.dimensions.columns);
-                    if (closest === state.location.column) { // There are no more obstacles
-                        closest = grid.dimensions.columns;
-                    }
+                    let closest = findClosestObstacle(obstacles, grid.dimensions.columns, state.location.column, (a, b) => a > b);
                     for (let i = state.location.column; i < closest; ++i) {
-                        addXPosition(state.location.row, i);
+                        shouldContinue = addFunction(state.location.row, i, state.direction);
                     }
                     if (closest === grid.dimensions.columns) {
-                        return xCount;
+                        return false;
                     }
                     state.location.column = closest - 1;
                     state.direction = "v";
@@ -138,6 +208,7 @@ function part1({startState, grid}) {
             
         }
     }
+    return true;
 }
 
 setup();
