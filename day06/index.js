@@ -44,54 +44,54 @@ function setup() {
 }
 
 function main({startState, grid}) {
-    const sum = part1({location: {...startState.location}, direction: startState.direction}, grid);
-    console.log("X Count: " + sum);
+    const {count: positionCount, positions: positionList} = part1({location: {...startState.location}, direction: startState.direction}, grid);
+    console.log("X Count: " + positionCount);
     let start = Date.now();
-    const locationCount = part2({location: {...startState.location}, direction: startState.direction}, grid);
+    const locationCount = part2({location: {...startState.location}, direction: startState.direction}, grid, positionList);
     let bruteForceTime = (Date.now() - start) / 1000;
     console.log("Loop locations count: " + locationCount);
     console.log("Brute force time(s): " + bruteForceTime);
 }
 
-function part2(startState, grid) {
+function part2(startState, grid, positionList) {
     let foundLoopCount = 0;
-    for (let i = 0; i < grid.dimensions.rows; ++i) {
+    for (const [strI, js] of Object.entries(positionList)) {
+        const i = parseInt(strI);
         let addedRow = false;
         if (!(i in grid.obstacles.rowOrder)) {
             grid.obstacles.rowOrder[i] = [];
             addedRow = true;
         }
-        for (let j = 0; j < grid.dimensions.columns; ++j) {
-
+        for (const j of js) {
             if (grid.obstacles.rowOrder[i].includes(j) || (i === startState.location.row && j === startState.location.column)) {
                 continue;
             }
-
+            
             // Add the obstacle to the row lookup
             grid.obstacles.rowOrder[i].push(j);
-
+            
             let addedColumn = false;
             if (!(j in grid.obstacles.columnOrder)) {
                 grid.obstacles.columnOrder[j] = [];
                 addedColumn = true;
             }
             grid.obstacles.columnOrder[j].push(i);
-
+            
             let visitedPositions = {};
             let stateCopy = {location: {row: startState.location.row, column: startState.location.column}, direction: startState.direction};
             let foundLoop = simulateWalk(stateCopy, grid, (row, col, dir) => {return !isLoopPosition(visitedPositions, row, col, dir)});
             if (foundLoop) {
                 foundLoopCount++;
             }
-
+            
             grid.obstacles.columnOrder[j].pop();
-
+            
             if (addedColumn) {
                 delete grid.obstacles.columnOrder[j];
             }
-
+            
             grid.obstacles.rowOrder[i].pop();
-        }
+        };
         if (addedRow) {
             delete grid.obstacles.rowOrder[i];
         }
@@ -133,7 +133,7 @@ function part1(startState, grid) {
 
     simulateWalk({...startState}, grid, addXPosition);
 
-    return xCount;
+    return {count: xCount, positions: xPositions};
 }
 
 function findClosestObstacle(obstacles, outOfRange, currentPosition, comparator) {
