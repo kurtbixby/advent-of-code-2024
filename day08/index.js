@@ -29,8 +29,11 @@ function setup() {
 function main(antennas, dims) {
     const antinodes = new Set();
     antennas.forEach((frequency, key, map) => findAntinodes(frequency, dims, antinodes));
-    const count = antinodes.size;
+    let count = antinodes.size;
     console.log("Unique Antinodes: " + count);
+    antennas.forEach((frequency, key, map) => findAntinodesUnrestricted(frequency, dims, antinodes));
+    count = antinodes.size;
+    console.log("Unrestricted Antinodes: " + count);
 }
 
 function findAntinodes(antennas, dims, antinodes) {
@@ -48,6 +51,31 @@ function findAntinodes(antennas, dims, antinodes) {
             const [afterRow, afterCol] = [location.row + rowDiff, location.col + colDiff];
             if ((afterRow >= 0 && afterRow < dims.rows) && (afterCol >= 0 && afterCol < dims.cols)) {
                 antinodes.add(`${afterRow}:${afterCol}`);
+            }
+        }
+    }
+}
+
+function findAntinodesUnrestricted(antennas, dims, antinodes) {
+    for (let i = 0; i < antennas.length; i++) {
+        const baseLocation = antennas[i];
+        for (let j = i + 1; j < antennas.length; j++) {
+            const location = antennas[j];
+            const rowDiff = location.row - baseLocation.row;
+            const colDiff = location.col - baseLocation.col;
+
+            let [behindRow, behindCol] = [baseLocation.row, baseLocation.col];
+            while ((behindRow >= 0 && behindRow < dims.rows) && (behindCol >= 0 && behindCol < dims.cols)) {
+                antinodes.add(`${behindRow}:${behindCol}`);
+                behindRow -= rowDiff;
+                behindCol -= colDiff;
+            }
+
+            let [afterRow, afterCol] = [location.row, location.col];
+            while ((afterRow >= 0 && afterRow < dims.rows) && (afterCol >= 0 && afterCol < dims.cols)) {
+                antinodes.add(`${afterRow}:${afterCol}`);
+                afterRow += rowDiff;
+                afterCol += colDiff;
             }
         }
     }
