@@ -12,7 +12,8 @@ function setup() {
 }
 
 function main(driveStructure) {
-    compactDrive(driveStructure);
+    // compactDrive(driveStructure);
+    compactDrive_wholeFiles(driveStructure);
     const hash = calculateHash(driveStructure);
     console.log("Hash: " + hash);
 }
@@ -75,12 +76,53 @@ function compactDrive(structure) {
     }
 }
 
+function compactDrive_wholeFiles(structure) {
+    let l = 0;
+    let r = findNextFile(structure, structure.length - 1);
+    let set = new Set();
+
+    for (let i = structure.length - 1; i >= 0; i--) {
+        let chunk = structure[i];
+        if (isNaN(chunk.file)) {
+            continue;
+        }
+        let dst = findFirstOpenSize(structure, chunk.size, i);
+        if (isNaN(dst) || set.has(chunk.file)) {
+            continue;
+        }
+        set.add(chunk.file);
+        
+        if (structure[dst].size > chunk.size) {
+            const replacement = {size: structure[dst].size - chunk.size, file: NaN};
+            structure[dst].size = chunk.size;
+            structure[dst].file = chunk.file;
+            structure.splice(dst + 1, 0, replacement);
+            chunk.file = NaN;
+        } else if (structure[dst].size === chunk.size) {
+            structure[dst].file = chunk.file;
+            chunk.file = NaN;
+        } else {
+            console.error("YOU MESSED UP");
+        }
+    }
+}
+
 function findNextOpen(structure, startIndex) {
     let index = startIndex;
     while (!isNaN(structure[index].file)) {
         index++;
     }
     return index;
+}
+
+function findFirstOpenSize(structure, size, end) {
+    for (let i = 0; i < Math.min(structure.length, end); i++) {
+        if (isNaN(structure[i].file) && structure[i].size >= size) {
+            return i;
+        }
+    }
+
+    return NaN;
 }
 
 function findNextFile(structure, startIndex) {
@@ -111,11 +153,10 @@ function calculateHash(structure) {
     let blockNum = 0;
     let sum = 0;
     for (const chunk of structure) {
-        if (isNaN(chunk.file)) {
-            continue;
-        }
-        for (let i = 0; i < chunk.size; i++) {
-            sum += (chunk.file * (blockNum + i));
+        if (!isNaN(chunk.file)) {
+            for (let i = 0; i < chunk.size; i++) {
+                sum += (chunk.file * (blockNum + i));
+            }
         }
         blockNum += chunk.size;
     }
