@@ -12,9 +12,9 @@ function setup() {
 }
 
 function main(driveStructure) {
-    printDrive(driveStructure);
     compactDrive(driveStructure);
-    printDrive(driveStructure);
+    const hash = calculateHash(driveStructure);
+    console.log("Hash: " + hash);
 }
 
 function buildStructure(driveLine) {
@@ -38,33 +38,36 @@ function compactDrive(structure) {
     while (isNaN(structure.at(src).file)) {
         src--;
     }
-    let srcIdx = 0;
 
     while (dst < structure.length + src) {
         // console.log("dst: " + dst);
         // console.log("src: " + src);
-        printDrive(structure);
-        if (structure[dst].size === structure.at(src).size - srcIdx) {
+        if (structure[dst].size === structure.at(src).size) {
             // exact space remaining
             structure[dst].file = structure.at(src).file;
             structure.at(src).file = NaN;
             dst = findNextOpen(structure, dst + 1);
             src = findNextFile(structure, src - 1);
-            srcIdx = 0;
-        } else if (structure[dst].size > structure.at(src).size - srcIdx) {
+        } else if (structure[dst].size > structure.at(src).size) {
             // extra space remaining
-            let replacement = {size: structure.at(src).size - srcIdx, file: structure.at(src).file};
+            let replacement = {size: structure.at(src).size, file: structure.at(src).file};
             let added = {size: structure[dst].size - replacement.size, file: NaN};
             structure.at(src).file = NaN;
             structure[dst] = replacement;
             structure.splice(dst + 1, 0, added);
             dst = dst + 1;
             src = findNextFile(structure, src - 1);
-            srcIdx = 0;
-        } else if (structure[dst].size < structure.at(src).size - srcIdx) {
+        } else if (structure[dst].size < structure.at(src).size) {
             // less space remaining
             structure[dst].file = structure.at(src).file;
-            srcIdx += structure[dst].size;
+            const replacement = {size: structure[dst].size, file: NaN};
+            if (src === -1) {
+                structure.push(replacement);
+            } else {
+                structure.splice(src + 1, 0, replacement);
+            }
+            src--;
+            structure.at(src).size -= structure[dst].size;
             dst = findNextOpen(structure, dst + 1);
         } else {
             console.error("YOU DONE MESSED UP A-ARON");
@@ -104,8 +107,20 @@ function printDrive(structure) {
     return string;
 }
 
-function calculateHash() {
+function calculateHash(structure) {
+    let blockNum = 0;
+    let sum = 0;
+    for (const chunk of structure) {
+        if (isNaN(chunk.file)) {
+            continue;
+        }
+        for (let i = 0; i < chunk.size; i++) {
+            sum += (chunk.file * (blockNum + i));
+        }
+        blockNum += chunk.size;
+    }
 
+    return sum;
 }
 
 setup();
